@@ -8,3 +8,5 @@ numpy==2.0.2
 # Librerías de la app
 streamlit
 altair
+shap
+matplotlib
