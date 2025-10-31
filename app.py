@@ -108,27 +108,15 @@ model_features = [
     'actor3_popularity', 'budget', 'actor1_age', 'actor2_age', 'actor3_age'
 ]
 
-# 3. Barra Lateral (Sidebar)
-st.sidebar.title("🤖 Probar el Modelo")
-st.sidebar.write("Ingresa los datos para una nueva película y obtén una predicción.")
-
-with st.sidebar.form(key="prediction_form"):
-    st.header("Datos de la Película")
-    budget = st.number_input("Presupuesto (Budget)", min_value=1000000, max_value=400000000, value=50000000, step=1000000, format="%d")
-    score = st.slider("Puntaje TMDB (Score)", min_value=0.0, max_value=10.0, value=7.0, step=0.1)
-    movie_popularity = st.slider("Popularidad de la Película", min_value=10.0, max_value=500.0, value=100.0, step=5.0)
-    
-    st.header("Datos de Actores")
-    actor1_popularity = st.slider("Popularidad Actor 1", min_value=1.0, max_value=100.0, value=15.0)
-    actor1_age = st.slider("Edad Actor 1", min_value=18, max_value=80, value=45)
-    
-    actor2_popularity = st.slider("Popularidad Actor 2", min_value=1.0, max_value=80.0, value=10.0)
-    actor2_age = st.slider("Edad Actor 2", min_value=18, max_value=80, value=40)
-    
-    actor3_popularity = st.slider("Popularidad Actor 3", min_value=1.0, max_value=60.0, value=5.0)
-    actor3_age = st.slider("Edad Actor 3", min_value=18, max_value=80, value=35)
-
-    submit_button = st.form_submit_button(label="📈 Predecir Ingresos", type="primary", use_container_width=True)
+# 3. Barra Lateral (Sidebar) --- CAMBIO: La barra lateral ahora está casi vacía
+st.sidebar.title("Sobre el Proyecto")
+st.sidebar.info("""
+**Grupo 21 - Cuarta Entrega**
+Esta aplicación web es la entrega final del Trabajo Práctico Integrador.
+* **Modelo:** CatBoost Regressor ($R^2 \approx 0.79$).
+* **Datos:** TMDB (Películas de Acción 2000-Presente).
+""")
+st.sidebar.markdown("El código fuente se encuentra en [GitHub](https://github.com/jusnock/tpintegrador-entrega4).")
 
 
 # --- Título Principal y Pestañas (Tabs) ---
@@ -142,30 +130,7 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 # --- Lógica de Predicción ---
-if "prediction_made" not in st.session_state:
-    st.session_state.prediction_made = False
-
-if submit_button:
-    input_data = {
-        'score': [score], 'movie_popularity': [movie_popularity], 'actor1_popularity': [actor1_popularity],
-        'actor2_popularity': [actor2_popularity], 'actor3_popularity': [actor3_popularity],
-        'budget': [float(budget)], 'actor1_age': [float(actor1_age)], 
-        'actor2_age': [float(actor2_age)], 'actor3_age': [float(actor3_age)]
-    }
-    input_df = pd.DataFrame(input_data)[model_features] 
-
-    prediction = model.predict(input_df)
-    predicted_revenue = prediction[0]
-    profit = predicted_revenue - budget
-    profit_percent = (profit / budget) * 100
-
-    # Guardar en el estado de la sesión para mostrar en la Pestaña 2
-    st.session_state.prediction_made = True
-    st.session_state.predicted_revenue = predicted_revenue
-    st.session_state.profit = profit
-    st.session_state.profit_percent = profit_percent
-    st.session_state.input_df = input_df # Guardamos los inputs para SHAP
-    st.session_state.budget = budget
+# (Eliminada de aquí, se mueve dentro de la Pestaña 2)
 
 
 # --- Pestaña 1: Visualizaciones ---
@@ -249,68 +214,100 @@ with tab1:
     """)
 
 
-# --- Pestaña 2: Prueba del Modelo (AHORA CON RESULTADOS) ---
+# --- Pestaña 2: Prueba del Modelo (AHORA CON FORMULARIO) ---
 with tab2:
     st.header("Prueba del Modelo en Vivo")
-    st.write("Usa el formulario en la **barra lateral izquierda** para ingresar los datos de una película.")
+    st.write("Ingresa los datos de una película en el formulario para obtener una predicción de sus ingresos y la explicación del modelo.")
     
-    if st.session_state.prediction_made:
-        st.subheader("Resultados de la Predicción")
-        col1, col2 = st.columns(2)
-        col1.metric(
-            label="Ingreso (Revenue) Predicho", 
-            value=f"${st.session_state.predicted_revenue:,.0f}"
-        )
-        col2.metric(
-            label="Ganancia/Pérdida Estimada",
-            value=f"${st.session_state.profit:,.0f}",
-            delta=f"{st.session_state.profit_percent:.2f} %"
-        )
-        st.info(f"Cálculo basado en un presupuesto de ${st.session_state.budget:,.0f}.", icon="💰")
-        
-        st.divider()
+    # --- CAMBIO: Formulario y resultados en dos columnas ---
+    col1, col2 = st.columns([1, 2]) # Columna de inputs más pequeña
 
-        st.subheader("Explicación de la Predicción (XAI con SHAP)")
-        st.write("Este gráfico muestra *por qué* el modelo llegó a esa predicción. Las características en **rojo** empujan la predicción hacia arriba (más ingresos), y las en **azul** la empujan hacia abajo.")
-        
-        try:
-            # 1. Aplicar los mismos pasos del pipeline (imputación, escalado)
-            input_transformed = model.named_steps['preprocessor'].transform(st.session_state.input_df)
+    with col1:
+        # --- CAMBIO: Formulario movido aquí ---
+        with st.form(key="prediction_form_tab2"):
+            st.header("Datos de la Película")
+            budget = st.number_input("Presupuesto (Budget)", min_value=1000000, max_value=400000000, value=50000000, step=1000000, format="%d")
+            score = st.slider("Puntaje TMDB (Score)", min_value=0.0, max_value=10.0, value=7.0, step=0.1)
+            movie_popularity = st.slider("Popularidad de la Película", min_value=10.0, max_value=500.0, value=100.0, step=5.0)
             
-            # 2. Obtener los valores SHAP del explainer
-            shap_values = shap_explainer.shap_values(input_transformed)
+            st.header("Datos de Actores")
+            actor1_popularity = st.slider("Popularidad Actor 1", min_value=1.0, max_value=100.0, value=15.0)
+            actor1_age = st.slider("Edad Actor 1", min_value=18, max_value=80, value=45)
             
-            # 3. Crear el gráfico
-            # --- CAMBIO 1: Aumentar la altura ---
-            fig, ax = plt.subplots(figsize=(10, 6)) # Era (10, 5)
-            shap.waterfall_plot(
-                shap.Explanation(
-                    values=shap_values[0], 
-                    base_values=shap_explainer.expected_value, 
-                    data=st.session_state.input_df.iloc[0], 
-                    feature_names=st.session_state.input_df.columns.tolist() 
-                ),
-                max_display=9, 
-                show=False 
+            actor2_popularity = st.slider("Popularidad Actor 2", min_value=1.0, max_value=80.0, value=10.0)
+            actor2_age = st.slider("Edad Actor 2", min_value=18, max_value=80, value=40)
+            
+            actor3_popularity = st.slider("Popularidad Actor 3", min_value=1.0, max_value=60.0, value=5.0)
+            actor3_age = st.slider("Edad Actor 3", min_value=18, max_value=80, value=35)
+
+            submit_button_tab2 = st.form_submit_button(label="📈 Predecir Ingresos", type="primary", use_container_width=True)
+
+    with col2:
+        # --- CAMBIO: Lógica de predicción y resultados movidos aquí ---
+        if submit_button_tab2:
+            input_data = {
+                'score': [score], 'movie_popularity': [movie_popularity], 'actor1_popularity': [actor1_popularity],
+                'actor2_popularity': [actor2_popularity], 'actor3_popularity': [actor3_popularity],
+                'budget': [float(budget)], 'actor1_age': [float(actor1_age)], 
+                'actor2_age': [float(actor2_age)], 'actor3_age': [float(actor3_age)]
+            }
+            input_df = pd.DataFrame(input_data)[model_features] 
+
+            prediction = model.predict(input_df)
+            predicted_revenue = prediction[0]
+            profit = predicted_revenue - budget
+            profit_percent = (profit / budget) * 100
+
+            # --- Mostrar Resultados ---
+            st.subheader("Resultados de la Predicción")
+            metric_col1, metric_col2 = st.columns(2)
+            metric_col1.metric(
+                label="Ingreso (Revenue) Predicho", 
+                value=f"${predicted_revenue:,.0f}"
             )
-            plt.tight_layout() 
+            metric_col2.metric(
+                label="Ganancia/Pérdida Estimada",
+                value=f"${profit:,.0f}",
+                delta=f"{profit_percent:.2f} %"
+            )
+            st.info(f"Cálculo basado en un presupuesto de ${budget:,.0f}.", icon="💰")
             
-            # --- CAMBIO 2: Añadir use_container_width=True ---
-            st.pyplot(fig, use_container_width=True) # <-- AÑADIDO
-            
-            with st.expander("Ver valores de entrada y SHAP"):
-                st.write("Valores de entrada:")
-                st.dataframe(st.session_state.input_df)
-                st.write("Valores SHAP (la 'fuerza' de cada feature):")
-                shap_df = pd.DataFrame(shap_values, columns=st.session_state.input_df.columns)
-                st.dataframe(shap_df)
-        
-        except Exception as e:
-            st.error(f"Error al generar el gráfico SHAP: {e}")
-            st.write("El modelo se cargó, pero no se pudo generar la explicación.")
+            st.divider()
 
-    else:
-        st.info("Presiona el botón 'Predecir Ingresos' en la barra lateral para ver un resultado.")
+            st.subheader("Explicación de la Predicción (XAI con SHAP)")
+            st.write("Este gráfico muestra *por qué* el modelo llegó a esa predicción. Las características en **rojo** empujan la predicción hacia arriba (más ingresos), y las en **azul** la empujan hacia abajo.")
+            
+            try:
+                input_transformed = model.named_steps['preprocessor'].transform(input_df)
+                shap_values = shap_explainer.shap_values(input_transformed)
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                shap.waterfall_plot(
+                    shap.Explanation(
+                        values=shap_values[0], 
+                        base_values=shap_explainer.expected_value, 
+                        data=input_df.iloc[0], 
+                        feature_names=input_df.columns.tolist() 
+                    ),
+                    max_display=9, 
+                    show=False 
+                )
+                plt.tight_layout() 
+                st.pyplot(fig, use_container_width=True)
+                
+                with st.expander("Ver valores de entrada y SHAP"):
+                    st.write("Valores de entrada:")
+                    st.dataframe(input_df)
+                    st.write("Valores SHAP (la 'fuerza' de cada feature):")
+                    shap_df = pd.DataFrame(shap_values, columns=input_df.columns)
+                    st.dataframe(shap_df)
+            
+            except Exception as e:
+                st.error(f"Error al generar el gráfico SHAP: {e}")
+                st.write("El modelo se cargó, pero no se pudo generar la explicación.")
+
+        else:
+            st.info("Ingresa los datos en el formulario de la izquierda y presiona 'Predecir Ingresos' para ver los resultados.")
 
 
 # --- Pestaña 3: Sobre el Proyecto ---
