@@ -6,14 +6,13 @@ import numpy as np
 import shap
 import matplotlib.pyplot as plt
 import os
-import requests # Necesario para la descarga
+import requests  # Necesario para la descarga
 
 # --- 1. Configuración de la Descarga ---
-# ▼▼▼ PEGA AQUÍ EL ID DE TU ARCHIVO DE GOOGLE DRIVE ▼▼▼
-GOOGLE_DRIVE_FILE_ID = "https://drive.google.com/file/d/1C33INLaAQi3cJSpwWcnaOc0dDwHEJ2CC/view?usp=sharing"
-# ▲▲▲ PEGA AQUÍ EL ID DE TU ARCHIVO DE GOOGLE DRIVE ▲▲▲
+# ID de tu archivo de Google Drive (Corregido)
+GOOGLE_DRIVE_FILE_ID = "1C33INLaAQi3cJSpwWcnaOc0dDwHEJ2CC"
 
-MODEL_URL = f"https://drive.google.com/uc?export=download&id=1C33INLaAQi3cJSpwWcnaOc0dDwHEJ2CC"
+MODEL_URL = f"https://drive.google.com/uc?export=download&id={GOOGLE_DRIVE_FILE_ID}"
 MODEL_PATH = "modelo_descargado.pkl" # Lo guardamos con este nombre
 
 
@@ -27,7 +26,7 @@ def download_model(url, file_path):
                 with requests.get(url, stream=True) as r:
                     r.raise_for_status()
                     with open(file_path, 'wb') as f:
-                        for chunk in r.iter_content(chunk_size=8192): 
+                        for chunk in r.iter_content(chunk_size=8192):
                             f.write(chunk)
                 st.success("Modelo descargado exitosamente.")
             except Exception as e:
@@ -42,7 +41,18 @@ def download_model(url, file_path):
 st.set_page_config(
     page_title="Análisis y Predicción de Ingresos de Películas",
     page_icon="🎬",
-    # ... (el resto de tu st.set_page_config) ...
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/jusnock/tpintegrador-entrega4',
+        'Report a bug': 'https://github.com/jusnock/tpintegrador-entrega4/issues',
+        'About': """
+        ## Aplicación para el Trabajo Práctico Integrador
+        **Grupo 21 - Cuarta Entrega**
+        * **Objetivo:** Explorar datos y predecir ingresos de películas.
+        * **Modelo:** CatBoost Regressor ($R^2 \approx 0.79$).
+        """
+    }
 )
 
 # --- 4. Carga de Activos (Modelo y Datos) ---
@@ -58,10 +68,15 @@ def load_model(file_path):
 
 @st.cache_data
 def load_data():
-    # ... (tu función load_data sin cambios) ...
+    """Carga el dataset de películas."""
     try:
         df = pd.read_csv('tmdb_dataset_accion_2000_presente_10k.csv')
-        # ... (resto del preprocesamiento) ...
+        df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
+        df['profit'] = df['revenue'] - df['budget']
+        df['profit_percentage'] = 0.0
+        mask = df['budget'] > 0
+        df.loc[mask, 'profit_percentage'] = ((df.loc[mask, 'profit'] / df.loc[mask, 'budget']) * 100)
+        df['profit_percentage'] = df['profit_percentage'].replace([np.inf, -np.inf], np.nan)
         return df
     except Exception as e:
         st.error(f"Error fatal al cargar los datos: {e}")
@@ -69,13 +84,17 @@ def load_data():
     
 @st.cache_resource
 def get_shap_explainer(_model):
-    # ... (tu función get_shap_explainer sin cambios) ...
-    regressor = _model.named_steps['regressor']
-    return shap.TreeExplainer(regressor)
+    """Crea y cachea el explainer de SHAP para el modelo de árbol."""
+    try:
+        regressor = _model.named_steps['regressor']
+        return shap.TreeExplainer(regressor)
+    except Exception as e:
+        st.error(f"Error al crear el SHAP Explainer: {e}")
+        st.info("Asegúrate de que el modelo cargado sea un pipeline con un 'regressor' (CatBoost).")
+        st.stop()
 
 # --- 5. INICIO DE LA APP ---
 
-# --- ¡MUY IMPORTANTE! ---
 # 1. Ejecutar la descarga ANTES de cargar el modelo
 download_model(MODEL_URL, MODEL_PATH)
 
@@ -91,12 +110,28 @@ model_features = [
 
 # 3. Barra Lateral (Sidebar)
 st.sidebar.title("🤖 Probar el Modelo")
-# ... (El resto de tu código de la app, st.sidebar.form, st.tabs, etc.) ...
-# ... (Pega aquí el resto de tu app.py anterior) ...
+st.sidebar.write("Ingresa los datos para una nueva película y obtén una predicción.")
 
-# --- CÓDIGO RESTANTE (Pestañas, etc.) ---
-# (Asegúrate de pegar aquí el resto de tu código anterior: st.title, st.tabs, 
-# la lógica de st.session_state, y el contenido de tab1, tab2, y tab3)
+with st.sidebar.form(key="prediction_form"):
+    st.header("Datos de la Película")
+    budget = st.number_input("Presupuesto (Budget)", min_value=1000000, max_value=400000000, value=50000000, step=1000000, format="%d")
+    score = st.slider("Puntaje TMDB (Score)", min_value=0.0, max_value=10.0, value=7.0, step=0.1)
+    movie_popularity = st.slider("Popularidad de la Película", min_value=10.0, max_value=500.0, value=100.0, step=5.0)
+    
+    st.header("Datos de Actores")
+    actor1_popularity = st.slider("Popularidad Actor 1", min_value=1.0, max_value=100.0, value=15.0)
+    actor1_age = st.slider("Edad Actor 1", min_value=18, max_value=80, value=45)
+    
+    actor2_popularity = st.slider("Popularidad Actor 2", min_value=1.0, max_value=80.0, value=10.0)
+    actor2_age = st.slider("Edad Actor 2", min_value=18, max_value=80, value=40)
+    
+    actor3_popularity = st.slider("Popularidad Actor 3", min_value=1.0, max_value=60.0, value=5.0)
+    actor3_age = st.slider("Edad Actor 3", min_value=18, max_value=80, value=35)
+
+    submit_button = st.form_submit_button(label="📈 Predecir Ingresos", type="primary", use_container_width=True)
+
+
+# --- Título Principal y Pestañas (Tabs) ---
 st.title("🎬 Análisis y Predicción de Ingresos de Películas de Acción")
 st.markdown("Plataforma interactiva para el **Trabajo Práctico Integrador - Grupo 21**.")
 
@@ -106,21 +141,202 @@ tab1, tab2, tab3 = st.tabs([
     "📄 Sobre el Proyecto"
 ])
 
-# Lógica de predicción
+# --- Lógica de Predicción ---
 if "prediction_made" not in st.session_state:
     st.session_state.prediction_made = False
 
 if submit_button:
-    # ... (pega tu bloque 'if submit_button:' aquí) ...
-    
-# Pestaña 1: Visualizaciones
+    input_data = {
+        'score': [score], 'movie_popularity': [movie_popularity], 'actor1_popularity': [actor1_popularity],
+        'actor2_popularity': [actor2_popularity], 'actor3_popularity': [actor3_popularity],
+        'budget': [float(budget)], 'actor1_age': [float(actor1_age)], 
+        'actor2_age': [float(actor2_age)], 'actor3_age': [float(actor3_age)]
+    }
+    input_df = pd.DataFrame(input_data)[model_features] 
+
+    prediction = model.predict(input_df)
+    predicted_revenue = prediction[0]
+    profit = predicted_revenue - budget
+    profit_percent = (profit / budget) * 100
+
+    # Guardar en el estado de la sesión para mostrar en la Pestaña 2
+    st.session_state.prediction_made = True
+    st.session_state.predicted_revenue = predicted_revenue
+    st.session_state.profit = profit
+    st.session_state.profit_percent = profit_percent
+    st.session_state.input_df = input_df # Guardamos los inputs para SHAP
+    st.session_state.budget = budget
+
+
+# --- Pestaña 1: Visualizaciones ---
 with tab1:
-    # ... (pega el contenido de tu 'with tab1:' aquí) ...
+    st.header("Exploración Interactiva de los Datos")
+    st.write("Visualiza las relaciones clave en el dataset de películas de acción (2000-Presente).")
+    
+    st.subheader("Filtros del Dataset")
+    df_sample = df_raw.sample(n=2000, random_state=42).copy()
+    budget_range = st.slider(
+        "Filtrar por Presupuesto (Budget)",
+        min_value=float(df_sample['budget'].min()),
+        max_value=float(df_sample['budget'].max()),
+        value=(float(df_sample['budget'].min()), float(df_sample['budget'].max())),
+        key="budget_slider_tab1"
+    )
+    df_filtered = df_sample[
+        (df_sample['budget'] >= budget_range[0]) & 
+        (df_sample['budget'] <= budget_range[1]) &
+        (df_sample['revenue'] > 0)
+    ]
+    st.write(f"Mostrando {len(df_filtered)} películas (de 2000 aleatorias).")
 
-# Pestaña 2: Prueba del Modelo
+    # --- Gráfico 1 ---
+    st.subheader("Gráfico 1: Presupuesto vs. Ingresos (con Línea de Rentabilidad)")
+    line_data = pd.DataFrame({'budget': [df_filtered['budget'].min(), df_filtered['budget'].max()], 'revenue': [df_filtered['budget'].min(), df_filtered['budget'].max()]})
+    profit_line = alt.Chart(line_data).mark_line(color='red', strokeDash=[5,5]).encode(x='budget:Q', y='revenue:Q')
+    scatter_budget_revenue = alt.Chart(df_filtered).mark_circle(opacity=0.6).encode(
+        x=alt.X('budget:Q', title='Presupuesto ($)', axis=alt.Axis(format='$,.0f')),
+        y=alt.Y('revenue:Q', title='Ingresos ($)', axis=alt.Axis(format='$,.0f')),
+        color=alt.Color('score:Q', title='Puntaje TMDB', scale=alt.Scale(range='heatmap')),
+        size=alt.Size('profit_percentage:Q', title='% Ganancia', legend=alt.Legend(format='.0f')),
+        tooltip=['title', alt.Tooltip('budget', format='$,.0f'), alt.Tooltip('revenue', format='$,.0f'), 'score', alt.Tooltip('profit_percentage', format='.1f')]
+    ).interactive()
+    final_chart_1 = scatter_budget_revenue + profit_line
+    st.altair_chart(final_chart_1, use_container_width=True)
+    st.markdown("""
+    **Hallazgos Clave (Gráfico 1):**
+    * **Línea Roja:** Esta es la "línea de rentabilidad" (Presupuesto = Ingresos). Las películas **por encima** de la línea fueron rentables; las que están **por debajo** perdieron dinero.
+    * **Color:** El color (de azul a rojo) representa el puntaje de la película. Se observa que muchas películas de alto puntaje (más rojas) se sitúan muy por encima de la línea de rentabilidad.
+    * **Tamaño:** El tamaño de la burbuja es el porcentaje de ganancia. Vemos algunas películas de bajo presupuesto con enormes retornos porcentuales.
+    """)
+    st.divider()
+
+    # --- Gráfico 2 ---
+    st.subheader("Gráfico 2: Popularidad (Log) vs. Puntaje")
+    scatter_pop_score = alt.Chart(df_filtered).mark_point(filled=True, size=60, opacity=0.7).encode(
+        x=alt.X('movie_popularity:Q', title='Popularidad (Escala Log)', scale=alt.Scale(type='log')),
+        y=alt.Y('score:Q', title='Puntaje (Score)', scale=alt.Scale(zero=False)),
+        color=alt.Color('profit_percentage:Q', 
+                        title='% Ganancia', 
+                        scale=alt.Scale(type='log', domainMid=0, range='diverging')),
+        tooltip=['title', 'movie_popularity', 'score', alt.Tooltip('profit_percentage', format='.1f')]
+    ).properties(
+        title='Popularidad (Log) vs. Puntaje, coloreado por % de Ganancia'
+    ).interactive()
+    st.altair_chart(scatter_pop_score, use_container_width=True)
+    st.markdown("""
+    **Hallazgos Clave (Gráfico 2):**
+    * No hay una correlación clara entre *popularidad* y *puntaje*. Hay películas muy populares con puntajes bajos y viceversa.
+    * El color (azul = pérdida, rojo = ganancia) muestra que la rentabilidad está presente en todos los niveles de popularidad y puntaje.
+    * Sin embargo, las películas con puntajes muy bajos (ej. < 5.0) tienden a tener más puntos azules (pérdidas).
+    """)
+    st.divider()
+
+    # --- Gráfico 3 ---
+    st.subheader("Gráfico 3: Distribución de Ingresos")
+    histogram_revenue = alt.Chart(df_filtered).mark_bar().encode(
+        x=alt.X('revenue:Q', bin=alt.Bin(maxbins=40), title='Ingresos ($)'),
+        y=alt.Y('count()', title='Cantidad de Películas'),
+        tooltip=[alt.Tooltip('revenue:Q', bin=True, title='Rango de Ingresos'), 'count()']
+    ).properties(
+        title='Distribución de Ingresos en Taquilla'
+    ).interactive()
+    st.altair_chart(histogram_revenue, use_container_width=True)
+    st.markdown("""
+    **Hallazgos Clave (Gráfico 3):**
+    * La gran mayoría de las películas de acción recaudan menos de $250 millones.
+    * El dataset tiene una fuerte "cola larga" (long tail), con unas pocas películas (los "blockbusters") que recaudan cantidades extremadamente altas (ej. +$750M).
+    """)
+
+
+# --- Pestaña 2: Prueba del Modelo (AHORA CON RESULTADOS) ---
 with tab2:
-    # ... (pega el contenido de tu 'with tab2:' aquí) ...
+    st.header("Prueba del Modelo en Vivo")
+    st.write("Usa el formulario en la **barra lateral izquierda** para ingresar los datos de una película.")
+    
+    if st.session_state.prediction_made:
+        st.subheader("Resultados de la Predicción")
+        col1, col2 = st.columns(2)
+        col1.metric(
+            label="Ingreso (Revenue) Predicho", 
+            value=f"${st.session_state.predicted_revenue:,.0f}"
+        )
+        col2.metric(
+            label="Ganancia/Pérdida Estimada",
+            value=f"${st.session_state.profit:,.0f}",
+            delta=f"{st.session_state.profit_percent:.2f} %"
+        )
+        st.info(f"Cálculo basado en un presupuesto de ${st.session_state.budget:,.0f}.", icon="💰")
+        
+        st.divider()
 
-# Pestaña 3: Sobre el Proyecto
+        st.subheader("Explicación de la Predicción (XAI con SHAP)")
+        st.write("Este gráfico muestra *por qué* el modelo llegó a esa predicción. Las características en **rojo** empujan la predicción hacia arriba (más ingresos), y las en **azul** la empujan hacia abajo.")
+        
+        try:
+            # 1. Aplicar los mismos pasos del pipeline (imputación, escalado)
+            input_transformed = model.named_steps['preprocessor'].transform(st.session_state.input_df)
+            
+            # 2. Obtener los valores SHAP del explainer
+            shap_values = shap_explainer.shap_values(input_transformed)
+            
+            # 3. Crear el gráfico
+            fig, ax = plt.subplots(figsize=(10, 5))
+            shap.waterfall_plot(
+                shap.Explanation(
+                    values=shap_values[0], # Valores SHAP para la primera (y única) predicción
+                    base_values=shap_explainer.expected_value, # El ingreso promedio del modelo
+                    data=st.session_state.input_df.iloc[0], # Los valores que ingresó el usuario
+                    feature_names=st.session_state.input_df.columns.tolist() # Nombres de las features
+                ),
+                max_display=9, # Mostrar las 9 features
+                show=False # Evitar que se muestre con plt.show()
+            )
+            plt.tight_layout() # Ajustar el layout
+            st.pyplot(fig) # Mostrar el gráfico en Streamlit
+            
+            with st.expander("Ver valores de entrada y SHAP"):
+                st.write("Valores de entrada:")
+                st.dataframe(st.session_state.input_df)
+                st.write("Valores SHAP (la 'fuerza' de cada feature):")
+                shap_df = pd.DataFrame(shap_values, columns=st.session_state.input_df.columns)
+                st.dataframe(shap_df)
+        
+        except Exception as e:
+            st.error(f"Error al generar el gráfico SHAP: {e}")
+            st.write("El modelo se cargó, pero no se pudo generar la explicación.")
+
+    else:
+        st.info("Presiona el botón 'Predecir Ingresos' en la barra lateral para ver un resultado.")
+
+
+# --- Pestaña 3: Sobre el Proyecto ---
 with tab3:
-    # ... (pega el contenido de tu 'with tab3:' aquí) ...
+    st.header("Detalles del Trabajo Práctico Integrador")
+    
+    st.subheader("Grupo 21")
+    st.markdown("""
+    * **Integrantes:**
+    * *<Nombre Apellido 1>*
+    * *<Nombre Apellido 2>*
+    * *<... (completa con tu grupo)>*
+    """)
+    
+    st.subheader("Contexto del Proyecto")
+    st.markdown("""
+    Esta aplicación web es la **Cuarta Entrega** del Trabajo Práctico Integrador. El objetivo era construir un pipeline de datos completo, desde la recolección (ETL) y análisis exploratorio (EDA), hasta el entrenamiento de un modelo de Machine Learning y su despliegue en una aplicación interactiva.
+    """)
+    
+    st.subheader("Fuente de Datos")
+    st.markdown("""
+    Los datos se obtuvieron de **The Movie Database (TMDB)**. Se creó un dataset personalizado de aproximadamente 10,000 películas de acción estrenadas desde el año 2000 hasta la actualidad.
+    """)
+    
+    st.subheader("Modelo de Predicción")
+    st.markdown(f"""
+    Se entrenó un modelo de regresión **CatBoost** para predecir la variable `revenue` (ingresos). Las 9 características (features) utilizadas se muestran en la pestaña "Prueba del Modelo". 
+    
+    El modelo final (después de la optimización y el tratamiento de outliers) alcanzó un **$R^2 \approx 0.79$** en el conjunto de prueba.
+    """)
+    
+    st.subheader("Repositorio del Proyecto")
+    st.markdown("El código fuente de esta aplicación y de los notebooks de análisis se encuentra en [GitHub](https://github.com/jusnock/tpintegrador-entrega4).")
