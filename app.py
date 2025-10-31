@@ -42,7 +42,7 @@ st.set_page_config(
     page_title="Análisis y Predicción de Ingresos de Películas",
     page_icon="🎬",
     layout="wide",
-    initial_sidebar_state="expanded",
+    # --- CAMBIO: Eliminado initial_sidebar_state ---
     menu_items={
         'Get Help': 'https://github.com/jusnock/tpintegrador-entrega4',
         'Report a bug': 'https://github.com/jusnock/tpintegrador-entrega4/issues',
@@ -108,15 +108,7 @@ model_features = [
     'actor3_popularity', 'budget', 'actor1_age', 'actor2_age', 'actor3_age'
 ]
 
-# 3. Barra Lateral (Sidebar) --- CAMBIO: La barra lateral ahora está casi vacía
-st.sidebar.title("Sobre el Proyecto")
-st.sidebar.info("""
-**Grupo 21 - Cuarta Entrega**
-Esta aplicación web es la entrega final del Trabajo Práctico Integrador.
-* **Modelo:** CatBoost Regressor ($R^2 \approx 0.79$).
-* **Datos:** TMDB (Películas de Acción 2000-Presente).
-""")
-st.sidebar.markdown("El código fuente se encuentra en [GitHub](https://github.com/jusnock/tpintegrador-entrega4).")
+# --- CAMBIO: Sección 3. Barra Lateral (Sidebar) ELIMINADA ---
 
 
 # --- Título Principal y Pestañas (Tabs) ---
@@ -208,7 +200,7 @@ with tab1:
     ).interactive()
     st.altair_chart(histogram_revenue, use_container_width=True)
     st.markdown("""
-    **Hallazgos Clave (Gráfico 3):**
+    **HallazDgos Clave (Gráfico 3):**
     * La gran mayoría de las películas de acción recaudan menos de $250 millones.
     * El dataset tiene una fuerte "cola larga" (long tail), con unas pocas películas (los "blockbusters") que recaudan cantidades extremadamente altas (ej. +$750M).
     """)
