@@ -42,7 +42,6 @@ st.set_page_config(
     page_title="Análisis y Predicción de Ingresos de Películas",
     page_icon="🎬",
     layout="wide",
-    # --- CAMBIO: Eliminado initial_sidebar_state ---
     menu_items={
         'Get Help': 'https://github.com/jusnock/tpintegrador-entrega4',
         'Report a bug': 'https://github.com/jusnock/tpintegrador-entrega4/issues',
@@ -108,9 +107,6 @@ model_features = [
     'actor3_popularity', 'budget', 'actor1_age', 'actor2_age', 'actor3_age'
 ]
 
-# --- CAMBIO: Sección 3. Barra Lateral (Sidebar) ELIMINADA ---
-
-
 # --- Título Principal y Pestañas (Tabs) ---
 st.title("🎬 Análisis y Predicción de Ingresos de Películas de Acción")
 st.markdown("Plataforma interactiva para el **Trabajo Práctico Integrador - Grupo 21**.")
@@ -120,10 +116,6 @@ tab1, tab2, tab3 = st.tabs([
     "📈 Prueba del Modelo (en vivo)", 
     "📄 Sobre el Proyecto"
 ])
-
-# --- Lógica de Predicción ---
-# (Eliminada de aquí, se mueve dentro de la Pestaña 2)
-
 
 # --- Pestaña 1: Visualizaciones ---
 with tab1:
@@ -200,7 +192,7 @@ with tab1:
     ).interactive()
     st.altair_chart(histogram_revenue, use_container_width=True)
     st.markdown("""
-    **HallazDgos Clave (Gráfico 3):**
+    **Hallazgos Clave (Gráfico 3):**
     * La gran mayoría de las películas de acción recaudan menos de $250 millones.
     * El dataset tiene una fuerte "cola larga" (long tail), con unas pocas películas (los "blockbusters") que recaudan cantidades extremadamente altas (ej. +$750M).
     """)
@@ -211,11 +203,9 @@ with tab2:
     st.header("Prueba del Modelo en Vivo")
     st.write("Ingresa los datos de una película en el formulario para obtener una predicción de sus ingresos y la explicación del modelo.")
     
-    # --- CAMBIO: Formulario y resultados en dos columnas ---
     col1, col2 = st.columns([1, 2]) # Columna de inputs más pequeña
 
     with col1:
-        # --- CAMBIO: Formulario movido aquí ---
         with st.form(key="prediction_form_tab2"):
             st.header("Datos de la Película")
             budget = st.number_input("Presupuesto (Budget)", min_value=1000000, max_value=400000000, value=50000000, step=1000000, format="%d")
@@ -235,7 +225,6 @@ with tab2:
             submit_button_tab2 = st.form_submit_button(label="📈 Predecir Ingresos", type="primary", use_container_width=True)
 
     with col2:
-        # --- CAMBIO: Lógica de predicción y resultados movidos aquí ---
         if submit_button_tab2:
             input_data = {
                 'score': [score], 'movie_popularity': [movie_popularity], 'actor1_popularity': [actor1_popularity],
@@ -250,53 +239,101 @@ with tab2:
             profit = predicted_revenue - budget
             profit_percent = (profit / budget) * 100
 
-            # --- Mostrar Resultados ---
+            # --- CAMBIO: Mostrar Resultados (con formato en Millones) ---
             st.subheader("Resultados de la Predicción")
             metric_col1, metric_col2 = st.columns(2)
             metric_col1.metric(
                 label="Ingreso (Revenue) Predicho", 
-                value=f"${predicted_revenue:,.0f}"
+                value=f"${predicted_revenue / 1_000_000:,.1f} Millones"
             )
             metric_col2.metric(
                 label="Ganancia/Pérdida Estimada",
-                value=f"${profit:,.0f}",
+                value=f"${profit / 1_000_000:,.1f} Millones",
                 delta=f"{profit_percent:.2f} %"
             )
             st.info(f"Cálculo basado en un presupuesto de ${budget:,.0f}.", icon="💰")
             
             st.divider()
 
-            st.subheader("Explicación de la Predicción (XAI con SHAP)")
-            st.write("Este gráfico muestra *por qué* el modelo llegó a esa predicción. Las características en **rojo** empujan la predicción hacia arriba (más ingresos), y las en **azul** la empujan hacia abajo.")
-            
+            # --- CAMBIO: Nuevo Gráfico SHAP con Altair (más legible) ---
+            st.subheader("Explicación de la Predicción (XAI)")
+            st.write("Este gráfico muestra cuánto *impactó* cada característica en la predicción final. Las barras **rojas** sumaron ingresos, las **azules** restaron.")
+
             try:
+                # Calcular valores SHAP
                 input_transformed = model.named_steps['preprocessor'].transform(input_df)
                 shap_values = shap_explainer.shap_values(input_transformed)
+                base_value = shap_explainer.expected_value
+                shap_values_list = shap_values[0]
+                feature_names = input_df.columns.tolist()
+                feature_values = input_df.iloc[0].values
+
+                # Formatear valores de features para las etiquetas
+                feature_values_str = []
+                for name, val in zip(feature_names, feature_values):
+                    if name in ['score']:
+                        feature_values_str.append(f"{val:.1f}")
+                    elif name in ['movie_popularity', 'actor1_popularity', 'actor2_popularity', 'actor3_popularity']:
+                        feature_values_str.append(f"{val:.2f}")
+                    else: # budget, ages
+                        feature_values_str.append(f"{val:,.0f}")
                 
-                fig, ax = plt.subplots(figsize=(10, 6))
-                shap.waterfall_plot(
-                    shap.Explanation(
-                        values=shap_values[0], 
-                        base_values=shap_explainer.expected_value, 
-                        data=input_df.iloc[0], 
-                        feature_names=input_df.columns.tolist() 
-                    ),
-                    max_display=9, 
-                    show=False 
-                )
-                plt.tight_layout() 
-                st.pyplot(fig, use_container_width=True)
+                feature_labels = [f"{name} = {val}" for name, val in zip(feature_names, feature_values_str)]
                 
-                with st.expander("Ver valores de entrada y SHAP"):
+                # Crear DataFrame para el gráfico
+                shap_df = pd.DataFrame({
+                    'feature_label': feature_labels,
+                    'Impacto en Ingresos ($)': shap_values_list
+                })
+                
+                # Añadir color para el gráfico
+                shap_df['Impacto'] = np.where(shap_df['Impacto en Ingresos ($)'] >= 0, 'Positivo', 'Negativo')
+                
+                # Crear el gráfico de barras horizontal con Altair
+                chart = alt.Chart(shap_df).mark_bar().encode(
+                    # Ordenar las barras por el valor absoluto del impacto, de mayor a menor
+                    x=alt.X('Impacto en Ingresos ($)', 
+                            axis=alt.Axis(format='$,.0f') # Formato de moneda
+                           ),
+                    y=alt.Y('feature_label', 
+                            title="Característica y Valor Ingresado",
+                            # Ordenar por valor absoluto descendente
+                            sort=alt.EncodingSortField(field="Impacto en Ingresos ($)", op="sum", order='descending') 
+                           ),
+                    color=alt.Color('Impacto', 
+                                    scale={
+                                        'domain': ['Positivo', 'Negativo'],
+                                        'range': ['#e45756', '#3b5b9a'] # Rojo, Azul
+                                    },
+                                    legend=alt.Legend(title="Tipo de Impacto")
+                                   ),
+                    tooltip=[
+                        alt.Tooltip('feature_label', title='Característica'),
+                        alt.Tooltip('Impacto en Ingresos ($)', title='Impacto', format='$,.0f')
+                    ]
+                ).properties(
+                    title='Contribución de cada Característica a la Predicción'
+                ).interactive()
+
+                st.altair_chart(chart, use_container_width=True)
+
+                # Mostrar el valor base y la predicción final
+                st.info(f"**Predicción Base (Promedio del Modelo):** ${base_value:,.0f}\n"
+                        f"**Predicción Final (Base + Impactos):** ${predicted_revenue:,.0f}", icon="💡")
+
+                
+                with st.expander("Ver valores de entrada y SHAP (datos brutos)"):
                     st.write("Valores de entrada:")
                     st.dataframe(input_df)
                     st.write("Valores SHAP (la 'fuerza' de cada feature):")
-                    shap_df = pd.DataFrame(shap_values, columns=input_df.columns)
-                    st.dataframe(shap_df)
+                    shap_df_raw = pd.DataFrame(shap_values, columns=input_df.columns)
+                    st.dataframe(shap_df_raw)
             
             except Exception as e:
                 st.error(f"Error al generar el gráfico SHAP: {e}")
                 st.write("El modelo se cargó, pero no se pudo generar la explicación.")
+                # Imprimir el error en la consola de Streamlit para depuración
+                print(f"Error SHAP: {e}")
 
         else:
             st.info("Ingresa los datos en el formulario de la izquierda y presiona 'Predecir Ingresos' para ver los resultados.")
