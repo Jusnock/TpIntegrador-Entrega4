@@ -185,7 +185,8 @@ with tab1:
     df_filtered = df_sample[
         (df_sample['budget'] >= budget_range[0]) & 
         (df_sample['budget'] <= budget_range[1]) &
-        (df_sample['revenue'] > 0)
+        (df_sample['revenue'] > 0) &
+        (df_sample['movie_popularity'] > 0) 
     ]
     st.write(f"Mostrando {len(df_filtered)} películas (de 2000 aleatorias).")
 
@@ -217,7 +218,7 @@ with tab1:
         y=alt.Y('score:Q', title='Puntaje (Score)', scale=alt.Scale(zero=False)),
         color=alt.Color('profit_percentage:Q', 
                         title='% Ganancia', 
-                        scale=alt.Scale(type='log', domainMid=0, range='diverging')),
+                        scale=alt.Scale(domainMid=0, range='diverging')), 
         tooltip=['title', 'movie_popularity', 'score', alt.Tooltip('profit_percentage', format='.1f')]
     ).properties(
         title='Popularidad (Log) vs. Puntaje, coloreado por % de Ganancia'
@@ -280,19 +281,22 @@ with tab2:
             shap_values = shap_explainer.shap_values(input_transformed)
             
             # 3. Crear el gráfico
-            fig, ax = plt.subplots(figsize=(10, 5))
+            # --- CAMBIO 1: Aumentar la altura ---
+            fig, ax = plt.subplots(figsize=(10, 6)) # Era (10, 5)
             shap.waterfall_plot(
                 shap.Explanation(
-                    values=shap_values[0], # Valores SHAP para la primera (y única) predicción
-                    base_values=shap_explainer.expected_value, # El ingreso promedio del modelo
-                    data=st.session_state.input_df.iloc[0], # Los valores que ingresó el usuario
-                    feature_names=st.session_state.input_df.columns.tolist() # Nombres de las features
+                    values=shap_values[0], 
+                    base_values=shap_explainer.expected_value, 
+                    data=st.session_state.input_df.iloc[0], 
+                    feature_names=st.session_state.input_df.columns.tolist() 
                 ),
-                max_display=9, # Mostrar las 9 features
-                show=False # Evitar que se muestre con plt.show()
+                max_display=9, 
+                show=False 
             )
-            plt.tight_layout() # Ajustar el layout
-            st.pyplot(fig) # Mostrar el gráfico en Streamlit
+            plt.tight_layout() 
+            
+            # --- CAMBIO 2: Añadir use_container_width=True ---
+            st.pyplot(fig, use_container_width=True) # <-- AÑADIDO
             
             with st.expander("Ver valores de entrada y SHAP"):
                 st.write("Valores de entrada:")
@@ -316,9 +320,9 @@ with tab3:
     st.subheader("Grupo 21")
     st.markdown("""
     * **Integrantes:**
-    * *<Nombre Apellido 1>*
-    * *<Nombre Apellido 2>*
-    * *<... (completa con tu grupo)>*
+    * *Secotaro,Leonardo**
+    * *Vazquez,Juan Francisco**
+    * *Melonari,Martin**
     """)
     
     st.subheader("Contexto del Proyecto")
@@ -340,3 +344,4 @@ with tab3:
     
     st.subheader("Repositorio del Proyecto")
     st.markdown("El código fuente de esta aplicación y de los notebooks de análisis se encuentra en [GitHub](https://github.com/jusnock/tpintegrador-entrega4).")
+
