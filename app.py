@@ -322,12 +322,27 @@ with tab2:
                         f"**Predicción Final (Base + Impactos):** ${predicted_revenue:,.0f}", icon="💡")
 
                 
+                # --- CAMBIO: Formatear las tablas en el expander ---
                 with st.expander("Ver valores de entrada y SHAP (datos brutos)"):
-                    st.write("Valores de entrada:")
-                    st.dataframe(input_df)
-                    st.write("Valores SHAP (la 'fuerza' de cada feature):")
+                    st.write("Valores de entrada (los datos que ingresaste):")
+                    # Formatear input_df para que se vea más limpio
+                    st.dataframe(input_df.style.format({
+                        'score': '{:.1f}',
+                        'movie_popularity': '{:.2f}',
+                        'actor1_popularity': '{:.2f}',
+                        'actor2_popularity': '{:.2f}',
+                        'actor3_popularity': '{:.2f}',
+                        'budget': '${:,.0f}',
+                        'actor1_age': '{:.0f}',
+                        'actor2_age': '{:.0f}',
+                        'actor3_age': '{:.0f}'
+                    }))
+                    
+                    st.write("Valores SHAP (el impacto de cada feature, en $):")
+                    st.markdown("*(Nota: Un valor negativo, como en `actor2_age`, no significa que la edad sea negativa, sino que esa edad **restó** ese monto a la predicción final.)*")
                     shap_df_raw = pd.DataFrame(shap_values, columns=input_df.columns)
-                    st.dataframe(shap_df_raw)
+                    # Formatear shap_df_raw para que muestre valores enteros de moneda
+                    st.dataframe(shap_df_raw.style.format('${:,.0f}'))
             
             except Exception as e:
                 st.error(f"Error al generar el gráfico SHAP: {e}")
