@@ -380,7 +380,7 @@ with tab3:
     st.markdown(f"""
     Se entrenó un modelo de regresión **CatBoost** para predecir la variable `revenue` (ingresos). Las 9 características (features) utilizadas se muestran en la pestaña "Prueba del Modelo". 
     
-    El modelo final (después de la optimización y el tratamiento de outliers) alcanzó un **$R^2 \approx 0.79$** en el conjunto de prueba.
+    El modelo final (después de la optimización y el tratamiento de outliers) alcanzó un **$R^2 \\approx 0.79$** en el conjunto de prueba.
     """)
     
     st.subheader("Repositorio del Proyecto")
