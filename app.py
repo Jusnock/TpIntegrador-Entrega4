@@ -210,16 +210,16 @@ with tab2:
             st.header("Datos de la Película")
             budget = st.number_input("Presupuesto (Budget)", min_value=1000000, max_value=400000000, value=50000000, step=1000000, format="%d")
             score = st.slider("Puntaje TMDB (Score)", min_value=0.0, max_value=10.0, value=7.0, step=0.1)
-            movie_popularity = st.slider("Popularidad de la Película", min_value=10.0, max_value=500.0, value=100.0, step=5.0)
+            movie_popularity = st.slider("Popularidad de la Película", min_value=1.0, max_value=100.0, value=100.0, step=5.0)
             
             st.header("Datos de Actores")
             actor1_popularity = st.slider("Popularidad Actor 1", min_value=1.0, max_value=100.0, value=15.0)
             actor1_age = st.slider("Edad Actor 1", min_value=18, max_value=80, value=45)
             
-            actor2_popularity = st.slider("Popularidad Actor 2", min_value=1.0, max_value=80.0, value=10.0)
+            actor2_popularity = st.slider("Popularidad Actor 2", min_value=1.0, max_value=100.0, value=10.0)
             actor2_age = st.slider("Edad Actor 2", min_value=18, max_value=80, value=40)
-            
-            actor3_popularity = st.slider("Popularidad Actor 3", min_value=1.0, max_value=60.0, value=5.0)
+
+            actor3_popularity = st.slider("Popularidad Actor 3", min_value=1.0, max_value=100.0, value=5.0)
             actor3_age = st.slider("Edad Actor 3", min_value=18, max_value=80, value=35)
 
             submit_button_tab2 = st.form_submit_button(label="📈 Predecir Ingresos", type="primary", use_container_width=True)
