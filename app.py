@@ -107,6 +107,20 @@ model_features = [
     'actor3_popularity', 'budget', 'actor1_age', 'actor2_age', 'actor3_age'
 ]
 
+# --- CAMBIO: Diccionario para nombres amigables ---
+feature_name_map = {
+    'score': 'Puntaje TMDB',
+    'movie_popularity': 'Popularidad (Película)',
+    'actor1_popularity': 'Popularidad (Actor 1)',
+    'actor2_popularity': 'Popularidad (Actor 2)',
+    'actor3_popularity': 'Popularidad (Actor 3)',
+    'budget': 'Presupuesto',
+    'actor1_age': 'Edad (Actor 1)',
+    'actor2_age': 'Edad (Actor 2)',
+    'actor3_age': 'Edad (Actor 3)'
+}
+
+
 # --- Título Principal y Pestañas (Tabs) ---
 st.title("🎬 Análisis y Predicción de Ingresos de Películas de Acción")
 st.markdown("Plataforma interactiva para el **Trabajo Práctico Integrador - Grupo 21**.")
@@ -291,12 +305,14 @@ with tab2:
                     else: # budget, ages
                         feature_values_str.append(f"{val:,.0f}")
                 
-                feature_labels = [f"{name} = {val}" for name, val in zip(feature_names, feature_values_str)]
+                # --- CAMBIO: Usar el feature_name_map para etiquetas amigables ---
+                feature_labels = [f"{feature_name_map.get(name, name)} = {val}" for name, val in zip(feature_names, feature_values_str)]
                 
                 # Crear DataFrame para el gráfico
                 shap_df = pd.DataFrame({
                     'feature_label': feature_labels,
-                    'Impacto en Ingresos ($)': shap_values_list
+                    'Impacto en Ingresos ($)': shap_values_list,
+                    'feature_name': feature_names # Guardamos el nombre original para formateo
                 })
                 
                 # Añadir color para el gráfico
