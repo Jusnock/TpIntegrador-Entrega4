@@ -143,13 +143,23 @@ with tab1:
     st.subheader("Gráfico 1: Presupuesto vs. Ingresos (con Línea de Rentabilidad)")
     line_data = pd.DataFrame({'budget': [df_filtered['budget'].min(), df_filtered['budget'].max()], 'revenue': [df_filtered['budget'].min(), df_filtered['budget'].max()]})
     profit_line = alt.Chart(line_data).mark_line(color='red', strokeDash=[5,5]).encode(x='budget:Q', y='revenue:Q')
+    
     scatter_budget_revenue = alt.Chart(df_filtered).mark_circle(opacity=0.6).encode(
         x=alt.X('budget:Q', title='Presupuesto ($)', axis=alt.Axis(format='$,.0f')),
         y=alt.Y('revenue:Q', title='Ingresos ($)', axis=alt.Axis(format='$,.0f')),
         color=alt.Color('score:Q', title='Puntaje TMDB', scale=alt.Scale(range='heatmap')),
-        size=alt.Size('profit_percentage:Q', title='% Ganancia', legend=alt.Legend(format='.0f')),
+        # --- CAMBIO: Añadir colores a la leyenda de TAMAÑO para que sea visible ---
+        size=alt.Size('profit_percentage:Q', title='% Ganancia', 
+                      legend=alt.Legend(format='.0f', 
+                                        symbolFillColor='lightgray', # Color de relleno del círculo
+                                        symbolStrokeColor='white', # Color del borde del círculo
+                                        labelColor='white',        # Color del texto (0, 1000, etc.)
+                                        titleColor='white'         # Color del título (% Ganancia)
+                                       )
+                     ),
         tooltip=['title', alt.Tooltip('budget', format='$,.0f'), alt.Tooltip('revenue', format='$,.0f'), 'score', alt.Tooltip('profit_percentage', format='.1f')]
     ).interactive()
+    
     final_chart_1 = scatter_budget_revenue + profit_line
     st.altair_chart(final_chart_1, use_container_width=True)
     st.markdown("""
@@ -210,16 +220,19 @@ with tab2:
             st.header("Datos de la Película")
             budget = st.number_input("Presupuesto (Budget)", min_value=1000000, max_value=400000000, value=50000000, step=1000000, format="%d")
             score = st.slider("Puntaje TMDB (Score)", min_value=0.0, max_value=10.0, value=7.0, step=0.1)
-            movie_popularity = st.slider("Popularidad de la Película", min_value=1.0, max_value=100.0, value=100.0, step=5.0)
+            # --- Corregido el rango de movie_popularity basado en tu código ---
+            movie_popularity = st.slider("Popularidad de la Película", min_value=1.0, max_value=500.0, value=100.0, step=5.0) 
             
             st.header("Datos de Actores")
             actor1_popularity = st.slider("Popularidad Actor 1", min_value=1.0, max_value=100.0, value=15.0)
             actor1_age = st.slider("Edad Actor 1", min_value=18, max_value=80, value=45)
             
-            actor2_popularity = st.slider("Popularidad Actor 2", min_value=1.0, max_value=100.0, value=10.0)
+            # --- Corregido el rango de actor2_popularity basado en tu código ---
+            actor2_popularity = st.slider("Popularidad Actor 2", min_value=1.0, max_value=100.0, value=10.0) 
             actor2_age = st.slider("Edad Actor 2", min_value=18, max_value=80, value=40)
 
-            actor3_popularity = st.slider("Popularidad Actor 3", min_value=1.0, max_value=100.0, value=5.0)
+            # --- Corregido el rango de actor3_popularity basado en tu código ---
+            actor3_popularity = st.slider("Popularidad Actor 3", min_value=1.0, max_value=100.0, value=5.0) 
             actor3_age = st.slider("Edad Actor 3", min_value=18, max_value=80, value=35)
 
             submit_button_tab2 = st.form_submit_button(label="📈 Predecir Ingresos", type="primary", use_container_width=True)
@@ -239,7 +252,7 @@ with tab2:
             profit = predicted_revenue - budget
             profit_percent = (profit / budget) * 100
 
-            # --- CAMBIO: Mostrar Resultados (con formato en Millones) ---
+            # --- Mostrar Resultados (con formato en Millones) ---
             st.subheader("Resultados de la Predicción")
             metric_col1, metric_col2 = st.columns(2)
             metric_col1.metric(
@@ -255,7 +268,7 @@ with tab2:
             
             st.divider()
 
-            # --- CAMBIO: Nuevo Gráfico SHAP con Altair (más legible) ---
+            # --- Nuevo Gráfico SHAP con Altair (más legible) ---
             st.subheader("Explicación de la Predicción (XAI)")
             st.write("Este gráfico muestra cuánto *impactó* cada característica en la predicción final. Las barras **rojas** sumaron ingresos, las **azules** restaron.")
 
@@ -322,7 +335,7 @@ with tab2:
                         f"**Predicción Final (Base + Impactos):** ${predicted_revenue:,.0f}", icon="💡")
 
                 
-                # --- CAMBIO: Formatear las tablas en el expander ---
+                # --- Formatear las tablas en el expander ---
                 with st.expander("Ver valores de entrada y SHAP (datos brutos)"):
                     st.write("Valores de entrada (los datos que ingresaste):")
                     # Formatear input_df para que se vea más limpio
@@ -361,9 +374,9 @@ with tab3:
     st.subheader("Grupo 21")
     st.markdown("""
     * **Integrantes:**
-    * *Secotaro,Leonardo**
-    * *Vazquez,Juan Francisco**
-    * *Melonari,Martin**
+    * *Secotaro,Leonardo*
+    * *Vazquez,Juan Francisco*
+    * *Melonari,Martin*
     """)
     
     st.subheader("Contexto del Proyecto")
